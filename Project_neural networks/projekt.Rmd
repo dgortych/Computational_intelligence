@@ -1,0 +1,142 @@
+---
+title: "Proj"
+output: html_document
+---
+
+#Wczytanie danych,Podstawowe informacje
+```{r} 
+data <- read.table(file = "D:/Studia Materiały/Semestr6/IO/CZ2/Projekt/diamonds-k-dl.txt", sep=',', header = TRUE, dec='.')
+str(data) 
+summary(data) 
+```
+
+#Zaweżenie danych, Zmiana danych kategorycznych 
+```{r}
+data <- data[sample(nrow(data),1000),]
+columns_to_transorm <- c('cut','color', 'clarity')
+
+data[columns_to_transorm] <- lapply(data[columns_to_transorm] , factor)
+
+data[, columns_to_transorm] <- sapply(data[, columns_to_transorm], unclass)
+```
+
+```{r}
+library(corrplot)
+#Macierze korelacyjne
+cor_m_p<-round(cor(data, method = 'pearson'),2) 
+cor_m_p
+corrplot(cor_m_p, method = 'number', type = 'upper', diag = FALSE)
+cor_m_s<-round(cor(data, method = 'spearman'),2) 
+cor_m_s 
+corrplot(cor_m_s, method = 'number', type = 'upper', diag = FALSE)
+```
+
+#Standaryzacja
+```{r}
+maxs <- apply(data, 2, max) 
+mins <- apply(data, 2, min)
+sc_data <- data.frame(data, scale(data, center = mins, scale = maxs - mins))
+
+sets <- sample(1:nrow(data), 0.80 * nrow(data)) 
+train_data<-sc_data[sets,] 
+test_data<-sc_data[-sets,]
+```
+
+#Model 1
+```{r}
+library(neuralnet) 
+set.seed(1234) 
+
+nn_data1 <- neuralnet(price.1~carat.1,
+                        data = train_data,
+                        hidden = c(2, 3),
+                        act.fct="tanh",
+                        algorithm = "rprop+",
+                        linear.output = TRUE)
+
+plot(nn_data1)
+pr_nn_data1<- compute(nn_data1, test_data) 
+pr<-unlist(pr_nn_data1$net.result) 
+
+
+#ocena jakosci modelu
+nn_data1_mod<-unlist(nn_data1 [["net.result"]]) 
+R2<-(cor(train_data$price.1, nn_data1_mod))^2
+R2
+
+
+se<- mean(train_data$price.1-nn_data1_mod)
+se
+
+plot(train_data$price.1, nn_data1_mod, col = "red", main = 'Real vs Predicted') 
+
+library(MLmetrics) 
+mape_m1<-MAPE(pr, test_data$price.1)
+mape_m1
+
+```
+
+#Model 2
+```{r}
+nn_data2 <- neuralnet(price.1~carat.1+x.1+y.1+z.1,
+                      data = train_data,
+                      hidden = c(2, 3),
+                      act.fct="tanh",
+                      algorithm = "rprop+",
+                      linear.output = TRUE)
+
+
+plot(nn_data2)
+pr_nn_data2<- compute(nn_data2, test_data) 
+pr<-unlist(pr_nn_data2$net.result) 
+
+
+#ocena jakosci modelu
+nn_data2_mod<-unlist(nn_data2 [["net.result"]]) 
+R2<-(cor(train_data$price.1, nn_data2_mod))^2
+R2
+
+se<- mean(train_data$price.1-nn_data2_mod)
+se
+
+plot(train_data$price.1, nn_data2_mod, col = "red", main = 'Real vs Predicted') 
+
+mape_m1<-MAPE(pr, test_data$price.1)
+mape_m1
+
+```
+
+#Model 3
+```{r}
+library(neuralnet) 
+set.seed(1234) 
+
+nn_data1 <- neuralnet(price.1~carat.1,
+                        data = train_data,
+                        hidden = 2,
+                        act.fct="tanh",
+                        algorithm = "rprop+",
+                        linear.output = TRUE)
+
+plot(nn_data1)
+pr_nn_data1<- compute(nn_data1, test_data) 
+pr<-unlist(pr_nn_data1$net.result) 
+
+
+#ocena jakosci modelu
+nn_data1_mod<-unlist(nn_data1 [["net.result"]]) 
+R2<-(cor(train_data$price.1, nn_data1_mod))^2
+R2
+
+
+se<- mean(train_data$price.1-nn_data1_mod)
+se
+
+plot(train_data$price.1, nn_data1_mod, col = "red", main = 'Real vs Predicted') 
+
+library(MLmetrics) 
+mape_m1<-MAPE(pr, test_data$price.1)
+mape_m1
+
+```
+
